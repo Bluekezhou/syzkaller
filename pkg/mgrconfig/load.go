@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/google/syzkaller/pkg/config"
@@ -246,5 +247,13 @@ func matchSyscall(name, pattern string) bool {
 		strings.HasPrefix(name, pattern[:len(pattern)-1]) {
 		return true
 	}
+
+	// regex search
+	regex_pattern := strings.Replace(pattern, "*", ".*", -1)
+	res, err := regexp.Match(regex_pattern, []byte(name))
+	if err == nil && res {
+		return true
+	}
+
 	return false
 }
