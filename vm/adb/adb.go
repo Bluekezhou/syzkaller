@@ -37,6 +37,10 @@ type Config struct {
 	// This option is enabled by default. Turn it off if your devices
 	// don't have battery service, or it causes problems otherwise.
 	BatteryCheck bool `json:"battery_check"`
+
+	// Init fuzz enviroment after device reboot, like install drivers or
+	// do some configuration.
+	InitCommand string `json:"init_command"`
 }
 
 type Pool struct {
@@ -56,6 +60,7 @@ func ctor(env *vmimpl.Env) (vmimpl.Pool, error) {
 	cfg := &Config{
 		Adb:          "adb",
 		BatteryCheck: true,
+		InitCommand:  "",
 	}
 	if err := config.LoadData(env.Config, cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse adb vm config: %v", err)
@@ -113,6 +118,12 @@ func (pool *Pool) Create(workdir string, index int) (vmimpl.Instance, error) {
 		return nil, err
 	}
 	inst.adb("shell", "echo 0 > /proc/sys/kernel/kptr_restrict")
+
+	// run initial host commands
+	fmt.Printf("execute init command %s\n", pool.cfg.InitCommand)
+	if _, err := osutil.RunCmd(time.Minute, "", pool.cfg.InitCommand); err != nil {
+		return nil, err
+	}
 	closeInst = nil
 	return inst, nil
 }
